@@ -5,4 +5,6 @@
  */
 
 import {LitTypeahead} from './typeahead.js';
+
 export {LitTypeahead};
+export default LitTypeahead;

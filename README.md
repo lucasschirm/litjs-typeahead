@@ -2,6 +2,55 @@
 
 A typeahead web component built with Lit and TypeScript.
 
+## Installation
+
+Install from npm:
+
+```bash
+npm install @lucasschirm/litjs-typeahead
+```
+
+Or with pnpm:
+
+```bash
+pnpm add @lucasschirm/litjs-typeahead
+```
+
+## Usage
+
+Import the component in your Lit project to register the `<lit-typeahead>` custom element:
+
+```ts
+import {LitElement, html} from 'lit';
+import {customElement} from 'lit/decorators.js';
+import LitTypeahead from '@lucasschirm/litjs-typeahead';
+
+@customElement('my-app')
+export class MyApp extends LitElement {
+  private _items = ['United States', 'Canada', 'Mexico'];
+
+  render() {
+    return html`
+      <lit-typeahead
+        .items=${this._items}
+        placeholder="Select a country"
+        @change=${this._onChange}
+      ></lit-typeahead>
+    `;
+  }
+
+  private _onChange(event: CustomEvent<{value: string}>) {
+    console.log('Selected:', event.detail.value);
+  }
+}
+```
+
+You can also use the named export if you prefer:
+
+```ts
+import {LitTypeahead} from '@lucasschirm/litjs-typeahead';
+```
+
 This template is generated from the `lit-starter-ts` package in [the main Lit
 repo](https://github.com/lit/lit). Issues and PRs for this template should be
 filed in that repo.

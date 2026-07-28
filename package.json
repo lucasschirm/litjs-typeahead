@@ -5,7 +5,23 @@
   "description": "A Lit-based typeahead web component",
   "main": "typeahead/index.js",
   "module": "typeahead/index.js",
+  "types": "typeahead/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./typeahead/index.d.ts",
+      "default": "./typeahead/index.js"
+    },
+    "./typeahead": {
+      "types": "./typeahead/typeahead.d.ts",
+      "default": "./typeahead/typeahead.js"
+    }
+  },
+  "files": [
+    "typeahead",
+    "custom-elements.json",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
