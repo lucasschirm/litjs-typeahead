@@ -8,15 +8,59 @@
     <script src="../node_modules/lit/polyfill-support.js"></script>
     <script type="module" src="../typeahead/index.js"></script>
     <style>
-      p {
+      section {
         border: solid 1px blue;
         padding: 8px;
+        margin-bottom: 16px;
       }
     </style>
   </head>
   <body>
-    <lit-typeahead>
-      <p>This is child content</p>
-    </lit-typeahead>
+    <section>
+      <h2>Basic usage</h2>
+      <lit-typeahead
+        id="country"
+        name="country"
+        items='["United States", "Canada", "Mexico"]'
+      ></lit-typeahead>
+    </section>
+
+    <section>
+      <h2>With placeholder</h2>
+      <lit-typeahead
+        id="country-placeholder"
+        name="country"
+        items='["United States", "Canada", "Mexico"]'
+        placeholder="Select a country"
+      ></lit-typeahead>
+    </section>
+
+    <section>
+      <h2>With select-first</h2>
+      <lit-typeahead
+        id="country-select-first"
+        name="country"
+        items='["United States", "Canada", "Mexico"]'
+        select-first
+      ></lit-typeahead>
+    </section>
+
+    <section>
+      <h2>With initial value</h2>
+      <lit-typeahead
+        id="country-value"
+        name="country"
+        items='["United States", "Canada", "Mexico"]'
+        value="United States"
+      ></lit-typeahead>
+    </section>
+
+    <script type="module">
+      document.querySelectorAll('lit-typeahead').forEach((el) => {
+        el.addEventListener('change', (event) => {
+          console.log(el.id, 'change', event.detail.value);
+        });
+      });
+    </script>
   </body>
 </html>

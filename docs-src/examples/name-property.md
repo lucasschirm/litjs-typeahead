@@ -1,15 +1,39 @@
 ---
 layout: example.11ty.cjs
-title: <lit-typeahead> ⌲ Examples ⌲ Name Property
+title: <lit-typeahead> ⌲ Examples ⌲ Placeholder & Select First
 tags: example
-name: Name Property
-description: Setting the name property
+name: Placeholder & Select First
+description: Setting the placeholder and select-first properties
 ---
 
-<lit-typeahead name="Earth"></lit-typeahead>
+<lit-typeahead
+  id="country-placeholder"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  placeholder="Select a country"
+></lit-typeahead>
+
+<lit-typeahead
+  id="country-select-first"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  select-first
+></lit-typeahead>
 
 <h3>HTML</h3>
 
 ```html
-<lit-typeahead name="Earth"></lit-typeahead>
+<lit-typeahead
+  id="country-placeholder"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  placeholder="Select a country"
+></lit-typeahead>
+
+<lit-typeahead
+  id="country-select-first"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  select-first
+></lit-typeahead>
 ```
