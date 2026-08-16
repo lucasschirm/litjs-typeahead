@@ -37,14 +37,26 @@ export class MyApp extends LitElement {
         .items=${this._items}
         placeholder="Select a country"
         @change=${this._onChange}
+        @item-selected=${this._onItemSelected}
       ></lit-typeahead>
     `;
   }
 
   private _onChange(event: CustomEvent<{value: string}>) {
+    console.log('Value:', event.detail.value);
+  }
+
+  private _onItemSelected(event: CustomEvent<{value: string}>) {
     console.log('Selected:', event.detail.value);
   }
 }
+```
+
+The component renders a custom dropdown by default. Set the `use-native` attribute
+to fall back to the legacy native `<datalist>` implementation:
+
+```html
+<lit-typeahead use-native .items=${this._items}></lit-typeahead>
 ```
 
 You can also use the named export if you prefer:

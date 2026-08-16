@@ -13,14 +13,34 @@
         padding: 8px;
         margin-bottom: 16px;
       }
+
+      /* Give the custom dropdown room to float over the next section. */
+      section:has(lit-typeahead:not([use-native])) {
+        overflow: visible;
+      }
+
+      .spacer {
+        height: 120px;
+      }
     </style>
   </head>
   <body>
     <section>
-      <h2>Basic usage</h2>
+      <h2>Custom dropdown (default)</h2>
       <lit-typeahead
         id="country"
         name="country"
+        items='["United States", "Canada", "Mexico", "Australia", "Austria", "Brazil", "Germany", "Ghana"]'
+      ></lit-typeahead>
+      <div class="spacer"></div>
+    </section>
+
+    <section>
+      <h2>Native datalist fallback</h2>
+      <lit-typeahead
+        id="country-native"
+        name="country"
+        use-native
         items='["United States", "Canada", "Mexico"]'
       ></lit-typeahead>
     </section>
@@ -33,6 +53,7 @@
         items='["United States", "Canada", "Mexico"]'
         placeholder="Select a country"
       ></lit-typeahead>
+      <div class="spacer"></div>
     </section>
 
     <section>
@@ -43,6 +64,7 @@
         items='["United States", "Canada", "Mexico"]'
         select-first
       ></lit-typeahead>
+      <div class="spacer"></div>
     </section>
 
     <section>
@@ -53,12 +75,16 @@
         items='["United States", "Canada", "Mexico"]'
         value="United States"
       ></lit-typeahead>
+      <div class="spacer"></div>
     </section>
 
     <script type="module">
       document.querySelectorAll('lit-typeahead').forEach((el) => {
         el.addEventListener('change', (event) => {
           console.log(el.id, 'change', event.detail.value);
+        });
+        el.addEventListener('item-selected', (event) => {
+          console.log(el.id, 'item-selected', event.detail.value);
         });
       });
     </script>
