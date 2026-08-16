@@ -15,10 +15,10 @@ permissions:
   contents: write
   pull-requests: write
 
-# Group previews per PR so successive workflows on the same ref don't race
-# with each other; the main deploy (group: pages) runs independently.
+# All gh-pages writes (previews and the main deploy in pages.yml) share one
+# concurrency group so they are serialized and can never race each other.
 concurrency:
-  group: preview-${{ github.ref }}
+  group: gh-pages-deploy
   cancel-in-progress: false
 
 jobs:
@@ -63,3 +63,8 @@ jobs:
           source-dir: ./_site/
           preview-branch: gh-pages
           umbrella-dir: pr-preview
+          # Wait for the Pages deployment so the sticky comment is only posted
+          # once the preview URL actually resolves. Requires GitHub Pages to
+          # serve the gh-pages branch (Settings > Pages), otherwise the action
+          # times out waiting for a deployment that never starts.
+          wait-for-pages-deployment: true
