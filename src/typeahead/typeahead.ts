@@ -5,22 +5,32 @@
  */
 
 import {LitElement, html, css, nothing, type PropertyValues} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import {customElement, property, state} from 'lit/decorators.js';
 
 let listIdCounter = 0;
 
 /**
- * A typeahead web component backed by a native `<input>` +
- * `<datalist>` pair.
+ * A typeahead web component.
  *
- * @fires change - Fired when the user selects or types a value. The
- * selected value is available on `event.detail.value`.
+ * By default it renders an `<input>` with a custom dropdown. Set `use-native`
+ * to fall back to the legacy `<input>` + `<datalist>` implementation.
+ *
+ * @fires change - Fired when the user selects or types a value. The selected
+ * value is available on `event.detail.value`.
+ * @fires item-selected - Fired when an item is selected from the custom
+ * dropdown, or when the value of the native datalist input matches an item.
+ * The selected value is available on `event.detail.value`.
  */
 @customElement('lit-typeahead')
 export class LitTypeahead extends LitElement {
   static override styles = css`
     :host {
       display: block;
+      position: relative;
+    }
+
+    .typeahead {
+      position: relative;
     }
 
     input {
@@ -38,12 +48,41 @@ export class LitTypeahead extends LitElement {
       outline: 2px solid var(--typeahead-focus-outline-color, #0b5fff);
       outline-offset: 2px;
     }
+
+    .dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      box-sizing: border-box;
+      margin: 4px 0 0;
+      padding: 4px 0;
+      list-style: none;
+      max-height: var(--typeahead-max-height, 240px);
+      overflow-y: auto;
+      background-color: var(--typeahead-background-color, #fff);
+      border: 1px solid var(--typeahead-border-color, #767676);
+      border-radius: var(--typeahead-border-radius, 4px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .dropdown li {
+      padding: var(--typeahead-option-padding, 8px);
+      cursor: pointer;
+      color: var(--typeahead-text-color, #000);
+    }
+
+    .dropdown li.active,
+    .dropdown li:hover {
+      background-color: var(--typeahead-highlight-color, #e6f0ff);
+    }
   `;
 
   /** Name applied to the underlying `<input>`, used when submitting a form. */
   @property({type: String}) name = '';
 
-  /** List of options shown to the user in the datalist. */
+  /** List of options shown to the user. */
   @property({type: Array}) items: string[] = [];
 
   /** Placeholder text shown in the input when it is empty. */
@@ -55,7 +94,18 @@ export class LitTypeahead extends LitElement {
   /** Current value of the input. */
   @property({type: String}) value = '';
 
+  /**
+   * When true, renders the legacy `<input>` + `<datalist>` implementation.
+   * When false (default), renders a custom dropdown.
+   */
+  @property({type: Boolean, attribute: 'use-native'}) useNative = false;
+
+  @state() private _isOpen = false;
+  @state() private _filteredItems: string[] = [];
+  @state() private _activeIndex = -1;
+
   private readonly _listId = `lit-typeahead-list-${listIdCounter++}`;
+  private readonly _listboxId = `lit-typeahead-listbox-${listIdCounter++}`;
 
   protected override willUpdate(changed: PropertyValues<this>) {
     if (
@@ -66,9 +116,31 @@ export class LitTypeahead extends LitElement {
     ) {
       this.value = this.items[0];
     }
+
+    if (
+      changed.has('items') ||
+      changed.has('value') ||
+      changed.has('selectFirst')
+    ) {
+      this._filteredItems = this._filterItems(this.value);
+      if (this._activeIndex >= this._filteredItems.length) {
+        this._activeIndex = -1;
+      }
+      if (this._filteredItems.length === 0) {
+        this._isOpen = false;
+      }
+    }
+
+    if (changed.has('useNative')) {
+      this._closeDropdown();
+    }
   }
 
   override render() {
+    return this.useNative ? this._renderNative() : this._renderCustom();
+  }
+
+  private _renderNative() {
     const id = this.id || undefined;
     return html`
       <input
@@ -79,7 +151,7 @@ export class LitTypeahead extends LitElement {
         placeholder=${this.placeholder || nothing}
         aria-label=${this.placeholder || this.name || nothing}
         .value=${this.value}
-        @change=${this._handleChange}
+        @change=${this._handleNativeChange}
       />
       <datalist id=${this._listId}>
         ${this.items.map((item) => html`<option value=${item}></option>`)}
@@ -87,12 +159,201 @@ export class LitTypeahead extends LitElement {
     `;
   }
 
-  private _handleChange(event: Event) {
+  private _renderCustom() {
+    const id = this.id || undefined;
+    return html`
+      <div class="typeahead">
+        <input
+          type="text"
+          id=${id ?? nothing}
+          name=${this.name || nothing}
+          placeholder=${this.placeholder || nothing}
+          aria-label=${this.placeholder || this.name || nothing}
+          role="combobox"
+          aria-expanded=${this._isOpen ? 'true' : 'false'}
+          aria-autocomplete="list"
+          aria-controls=${this._isOpen ? this._listboxId : nothing}
+          aria-activedescendant=${this._activeIndex >= 0
+            ? `${this._listboxId}-${this._activeIndex}`
+            : nothing}
+          .value=${this.value}
+          @input=${this._handleInput}
+          @keydown=${this._handleKeydown}
+          @focus=${this._handleFocus}
+          @blur=${this._handleBlur}
+          @click=${this._handleInputClick}
+          @change=${this._handleCustomChange}
+        />
+        ${this._isOpen && this._filteredItems.length > 0
+          ? html`
+              <ul
+                class="dropdown"
+                id=${this._listboxId}
+                role="listbox"
+                @mousedown=${this._handleListMouseDown}
+              >
+                ${this._filteredItems.map(
+                  (item, index) => html`
+                    <li
+                      id=${`${this._listboxId}-${index}`}
+                      role="option"
+                      aria-selected=${index === this._activeIndex
+                        ? 'true'
+                        : 'false'}
+                      class=${index === this._activeIndex ? 'active' : ''}
+                      @click=${() => this._selectItem(item)}
+                    >
+                      ${item}
+                    </li>
+                  `
+                )}
+              </ul>
+            `
+          : nothing}
+      </div>
+    `;
+  }
+
+  private _handleNativeChange(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = input.value;
+    this._dispatchChange(this.value);
+
+    if (this._findMatchingItem(this.value) !== undefined) {
+      this._dispatchItemSelected(this.value);
+    }
+  }
+
+  private _handleInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.value = input.value;
+    this._filteredItems = this._filterItems(input.value);
+    this._activeIndex = -1;
+    this._isOpen = this._filteredItems.length > 0;
+  }
+
+  private _handleCustomChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.value = input.value;
+    this._closeDropdown();
+    this._dispatchChange(this.value);
+  }
+
+  private _handleFocus() {
+    this._openDropdown();
+  }
+
+  private _handleInputClick() {
+    if (!this._isOpen) {
+      this._openDropdown();
+    }
+  }
+
+  private _handleBlur() {
+    this._closeDropdown();
+  }
+
+  private _handleListMouseDown(event: MouseEvent) {
+    // Keep focus on the input so the dropdown can handle option clicks
+    // before the input's blur handler runs.
+    event.preventDefault();
+  }
+
+  private _handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown' && !this._isOpen) {
+      event.preventDefault();
+      this._openDropdown();
+      if (this._isOpen) {
+        this._activeIndex = 0;
+      }
+      return;
+    }
+
+    if (!this._isOpen || this._filteredItems.length === 0) {
+      return;
+    }
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this._activeIndex =
+          (this._activeIndex + 1) % this._filteredItems.length;
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this._activeIndex =
+          this._activeIndex <= 0
+            ? this._filteredItems.length - 1
+            : this._activeIndex - 1;
+        break;
+      case 'Enter':
+        if (
+          this._activeIndex >= 0 &&
+          this._activeIndex < this._filteredItems.length
+        ) {
+          event.preventDefault();
+          this._selectItem(this._filteredItems[this._activeIndex]);
+        }
+        break;
+      case 'Escape':
+        event.preventDefault();
+        this._closeDropdown();
+        break;
+      default:
+        break;
+    }
+  }
+
+  private _selectItem(item: string) {
+    this.value = item;
+    this._closeDropdown();
+    this._dispatchChange(item);
+    this._dispatchItemSelected(item);
+  }
+
+  private _openDropdown() {
+    if (this.items.length === 0) {
+      this._isOpen = false;
+      return;
+    }
+
+    this._filteredItems = this._filterItems(this.value);
+    this._activeIndex = -1;
+    this._isOpen = this._filteredItems.length > 0;
+  }
+
+  private _closeDropdown() {
+    this._isOpen = false;
+    this._activeIndex = -1;
+  }
+
+  private _filterItems(value: string): string[] {
+    const query = value.trim().toLowerCase();
+    if (query === '') {
+      return [...this.items];
+    }
+    return this.items.filter((item) => item.toLowerCase().includes(query));
+  }
+
+  private _findMatchingItem(value: string): string | undefined {
+    const query = value.trim().toLowerCase();
+    return this.items.find((item) => item.toLowerCase() === query);
+  }
+
+  private _dispatchChange(value: string) {
     this.dispatchEvent(
       new CustomEvent('change', {
-        detail: {value: this.value},
+        detail: {value},
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private _dispatchItemSelected(value: string) {
+    this.dispatchEvent(
+      new CustomEvent('item-selected', {
+        detail: {value},
         bubbles: true,
         composed: true,
       })
