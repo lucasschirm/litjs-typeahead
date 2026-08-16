@@ -1,0 +1,65 @@
+name: Deploy PR previews
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+# pr-preview-action has to commit previews onto gh-pages, so the workflow
+# needs write access even though `pull_request` from same-repo branches
+# would normally be read-only by default.
+permissions:
+  contents: write
+  pull-requests: write
+
+# Same concurrency group the main deploy uses so a long-running preview
+# doesn't race with a sibling workflow on the same ref.
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # When the PR is closed, action: remove skips the deploy entirely,
+      # so we don't need to build anything in that case.
+      - name: Install dependencies
+        if: github.event.action != 'closed'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build component
+        if: github.event.action != 'closed'
+        run: pnpm run build
+
+      - name: Build demo page
+        if: github.event.action != 'closed'
+        run: |
+          mkdir -p _site
+          pnpm rollup -c --file _site/typeahead.bundled.js
+          cp pages/index.html _site/index.html
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: ./_site/
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          qr-code: true
