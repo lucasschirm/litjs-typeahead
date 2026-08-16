@@ -2,6 +2,8 @@
 
 A typeahead web component built with Lit and TypeScript.
 
+[check demo page](https://lucasschirm.github.io/litjs-typeahead/)
+
 ## Installation
 
 Install from npm:
