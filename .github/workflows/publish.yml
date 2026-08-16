@@ -1,0 +1,58 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    # A merge to main is a push to main, so this runs on merged PRs. Skip the
+    # version-bump commit this workflow pushes back, so it can't loop (this only
+    # matters if a PAT is used later instead of the GITHUB_TOKEN).
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # Required for npm trusted publishing (OIDC)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      # Note: do NOT set registry-url here. setup-node would write an empty
+      # _authToken line to .npmrc, which makes npm skip the OIDC trusted
+      # publishing flow and fail with ENEEDAUTH.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Trusted publishing needs npm CLI 11.5.1+ (Node 24 may bundle an older one).
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Generate custom elements manifest
+        run: pnpm analyze
+
+      - name: Bump patch version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version patch --message "chore(release): %s"
+
+      - name: Push version bump to main
+        run: git push origin HEAD:main --follow-tags
+
+      - name: Publish
+        run: npm publish --provenance
