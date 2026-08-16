@@ -23,12 +23,14 @@ jobs:
         with:
           version: 9
 
+      # Note: do NOT set registry-url here. setup-node would write an empty
+      # _authToken line to .npmrc, which makes npm skip the OIDC trusted
+      # publishing flow and fail with ENEEDAUTH.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm CLI 11.5.1+ (Node 24 may bundle an older one).
       - name: Upgrade npm
