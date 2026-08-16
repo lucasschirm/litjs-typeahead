@@ -215,17 +215,3 @@ Please check the [Publishing best practices](https://lit.dev/docs/tools/publishi
 ## More information
 
 See [Get started](https://lit.dev/docs/getting-started/) on the Lit site for more information.
-
-## GitHub Pages setup
-
-The demo at <https://lucasschirm.github.io/litjs-typeahead/> is built and published by the workflows in `.github/workflows/`. The PR preview workflow (`preview.yml`) uses [`rossjrw/pr-preview-action`](https://github.com/marketplace/actions/deploy-pr-preview), which writes preview builds onto the `gh-pages` branch alongside the main demo and exposes them at `https://<owner>.github.io/<repo>/pr-preview/pr-<n>/`.
-
-The action requires GitHub Pages to be served **from a branch**, not from the "GitHub Actions" build source. This is a **one-time repo setting** and must be configured before the workflows will produce a working site:
-
-1. Open **Settings → Pages**.
-2. Under **Source**, choose **Deploy from a branch**.
-3. Pick **Branch: `gh-pages`** and **Folder: `/` (root)**.
-
-This setting can only be changed through the GitHub web UI (or by an admin-scoped GitHub token via the REST API). The `GITHUB_TOKEN` provided to workflows is intentionally limited and does **not** have admin-repo permissions, so the workflows themselves cannot flip this switch for you.
-
-After the setting is changed, `pages.yml` will publish the demo to `gh-pages` on every push to `main`, and `preview.yml` will publish each pull-request preview to `gh-pages/pr-preview/pr-<n>/` and post a sticky comment on the PR with the link and a QR code.
