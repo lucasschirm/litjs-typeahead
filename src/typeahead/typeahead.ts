@@ -86,17 +86,16 @@ export class LitTypeahead extends LitElement {
       /* Keep the icon visually anchored but allow the cursor to reach it. */
       background: transparent;
       border: 0;
-      color: var(--typeahead-icon-color, #5a5a5a);
+      color: var(--typeahead-icon-color, #000);
       cursor: pointer;
       border-radius: 4px;
-      transition: color 180ms ease, background-color 180ms ease;
+      transition: background-color 180ms ease;
     }
 
     .toggle-icon:hover {
-      color: var(--typeahead-icon-color-hover, #0b5fff);
       background-color: var(
         --typeahead-icon-background-hover,
-        rgba(11, 95, 255, 0.08)
+        rgba(0, 0, 0, 0.06)
       );
     }
 
@@ -106,8 +105,8 @@ export class LitTypeahead extends LitElement {
     }
 
     /*
-      The default chevron SVG is provided as the slot's fallback content so it
-      can be replaced by the consumer. All default-icon styling targets
+      The default triangle SVG is provided as the slot's fallback content so
+      it can be replaced by the consumer. All default-icon styling targets
       toggle-icon-svg so consumers' slotted content is unaffected.
     */
     .toggle-icon-svg {
@@ -117,87 +116,22 @@ export class LitTypeahead extends LitElement {
       overflow: visible;
     }
 
-    .toggle-icon-svg .chevron-frame {
-      /* This rect rotates around its own center (12,12) when the dropdown
-         opens, giving the icon a "swivel" feel. */
-      transform-origin: 12px 12px;
-      transform: rotate(0deg);
-      transition: transform 380ms cubic-bezier(0.34, 1.2, 0.64, 1);
-    }
-
-    .toggle-icon-svg .chevron-main,
-    .toggle-icon-svg .chevron-echo {
-      transform-origin: 12px 13px;
-      transition:
-        transform 320ms cubic-bezier(0.34, 1.32, 0.64, 1),
-        opacity 280ms ease;
-    }
-
-    /*
-     * When open: chevron points up (rotated 180deg), the rotated frame keeps
-     * the visual balanced, the "echo" trail appears, and the pulse dot lights
-     * up so the user sees the dropdown is now "broadcasting" upward.
-     */
-    .is-open .toggle-icon-svg .chevron-frame {
-      transform: rotate(180deg);
-    }
-
-    .is-open .toggle-icon-svg .chevron-main {
-      transform: rotate(180deg);
-    }
-
-    .is-open .toggle-icon-svg .chevron-echo {
-      transform: rotate(180deg) translateY(-2px);
-      opacity: 0.55;
-      animation-duration: 1s;
-    }
-
-    .toggle-icon-svg .chevron-echo {
-      opacity: 0;
-      animation: typeahead-echo-glow 1.8s ease-in-out infinite;
-    }
-
-    .toggle-icon-svg .pulse-dot {
+    .toggle-icon-svg .chevron {
       fill: currentColor;
       stroke: none;
-      opacity: 0;
-      transform-origin: 12px 6px;
-      transition: opacity 220ms ease, transform 320ms ease-out;
-      animation: typeahead-pulse 1.8s ease-in-out infinite;
+      /* Rotate around the triangle's centroid so the flip stays in place. */
+      transform-origin: 12px 12px;
+      transform: rotate(0deg);
+      transition: transform 320ms cubic-bezier(0.34, 1.32, 0.64, 1);
     }
 
-    .is-open .toggle-icon-svg .pulse-dot {
-      opacity: 0.75;
-      transform: translateY(-1px) scale(1.1);
-    }
-
-    @keyframes typeahead-echo-glow {
-      0%,
-      100% {
-        opacity: 0;
-      }
-      50% {
-        opacity: 0.4;
-      }
-    }
-
-    @keyframes typeahead-pulse {
-      0%,
-      100% {
-        opacity: 0;
-        transform: scale(0.6);
-      }
-      50% {
-        opacity: 0.9;
-        transform: scale(1.4);
-      }
+    /* When the dropdown is open the triangle flips to point up. */
+    .is-open .toggle-icon-svg .chevron {
+      transform: rotate(180deg);
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .toggle-icon-svg .chevron-frame,
-      .toggle-icon-svg .chevron-main,
-      .toggle-icon-svg .chevron-echo,
-      .toggle-icon-svg .pulse-dot,
+      .toggle-icon-svg .chevron,
       .toggle-icon {
         animation: none;
         transition: none;
@@ -356,41 +290,20 @@ export class LitTypeahead extends LitElement {
               <svg
                 viewBox="0 0 24 24"
                 class="toggle-icon-svg"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                fill="currentColor"
+                stroke="none"
                 aria-hidden="true"
                 focusable="false"
               >
                 <!--
-                  A unique "carousel" chevron: an outlined rotated frame around
-                  a primary chevron, with a secondary "echo" chevron below it
-                  and a pulse dot at the top. The frame and chevron rotate
-                  180deg on open; the echo glows on its own @keyframes loop;
-                  the pulse dot fades in on open to give a subtle "broadcast"
-                  feel. The frame rotation is purely decorative and is part of
-                  the icon's identity, not just a transition trick.
+                  A simple solid black triangle: points down when the dropdown
+                  is closed and rotates 180deg (points up) when it is open.
+                  The flip is animated entirely with CSS.
                 -->
-                <rect
-                  class="chevron-frame"
-                  x="3.25"
-                  y="6.25"
-                  width="17.5"
-                  height="11.5"
-                  rx="5.75"
-                  stroke-opacity="0.18"
-                />
                 <path
-                  class="chevron-main"
-                  d="M7 9.5 L12 14.5 L17 9.5"
+                  class="chevron"
+                  d="M12 15.5 L6.5 8.5 H17.5 Z"
                 />
-                <path
-                  class="chevron-echo"
-                  d="M7 13 L12 18 L17 13"
-                />
-                <circle class="pulse-dot" cx="12" cy="5.5" r="1.1" />
               </svg>
             </slot>
           </button>
