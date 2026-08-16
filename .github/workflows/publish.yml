@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write # Required for npm trusted publishing (OIDC)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,12 +23,18 @@ jobs:
         with:
           version: 10
 
+      # Note: do NOT set registry-url here. setup-node would write an empty
+      # _authToken line to .npmrc, which makes npm skip the OIDC trusted
+      # publishing flow and fail with ENEEDAUTH.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm CLI 11.5.1+ (Node 24 may bundle an older one).
+      - name: Upgrade npm
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -48,6 +55,4 @@ jobs:
         run: git push origin HEAD:main --follow-tags
 
       - name: Publish
-        run: pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance

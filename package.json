@@ -58,6 +58,10 @@
   ],
   "author": "Lucas Schirm",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasschirm/litjs-typeahead.git"
+  },
   "publishConfig": {
     "access": "public"
   },
