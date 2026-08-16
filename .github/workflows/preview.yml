@@ -15,8 +15,8 @@ permissions:
   contents: write
   pull-requests: write
 
-# Same concurrency group the main deploy uses so a long-running preview
-# doesn't race with a sibling workflow on the same ref.
+# Group previews per PR so successive workflows on the same ref don't race
+# with each other; the main deploy (group: pages) runs independently.
 concurrency:
   group: preview-${{ github.ref }}
   cancel-in-progress: false
@@ -55,6 +55,7 @@ jobs:
           mkdir -p _site
           pnpm rollup -c --file _site/typeahead.bundled.js
           cp pages/index.html _site/index.html
+          touch _site/.nojekyll
 
       - name: Deploy preview
         uses: rossjrw/pr-preview-action@v1
@@ -62,4 +63,3 @@ jobs:
           source-dir: ./_site/
           preview-branch: gh-pages
           umbrella-dir: pr-preview
-          qr-code: true

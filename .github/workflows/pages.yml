@@ -44,6 +44,9 @@ jobs:
           mkdir -p _site
           pnpm rollup -c --file _site/typeahead.bundled.js
           cp pages/index.html _site/index.html
+          # Pages deploys this branch with Jekyll by default; a .nojekyll at the
+          # site root keeps the static demo served exactly as built.
+          touch _site/.nojekyll
 
       # Deploy by pushing _site onto the gh-pages branch. The pr-preview-action
       # lives alongside this on the same branch and uses `pr-preview/` as an
