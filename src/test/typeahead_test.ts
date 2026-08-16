@@ -307,7 +307,7 @@ suite('lit-typeahead', () => {
   });
 
   suite('toggle icon', () => {
-    test('renders a default chevron SVG inside a named slot', async () => {
+    test('renders a default triangle SVG inside a named slot', async () => {
       const el = (await fixture(
         html`<lit-typeahead
           items='["United States", "Canada", "Mexico"]'
@@ -323,7 +323,7 @@ suite('lit-typeahead', () => {
       // The default fallback SVG should be present in the shadow before any
       // consumer content is slotted in.
       const defaultIcon = slot!.querySelector('svg.toggle-icon-svg');
-      assert.ok(defaultIcon, 'default chevron SVG should render as a slot fallback');
+      assert.ok(defaultIcon, 'default triangle SVG should render as a slot fallback');
       assert.equal(defaultIcon!.getAttribute('aria-hidden'), 'true');
     });
 
