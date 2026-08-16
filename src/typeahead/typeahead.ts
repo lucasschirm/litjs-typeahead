@@ -464,7 +464,13 @@ export class LitTypeahead extends LitElement {
       return;
     }
 
-    this._filteredItems = this._filterItems(this.value);
+    // When the input already holds a complete item (for example right after
+    // one was selected), reset the filter and show the full list instead of
+    // narrowing it down to the selected item again.
+    this._filteredItems =
+      this._findMatchingItem(this.value) !== undefined
+        ? [...this.items]
+        : this._filterItems(this.value);
     this._activeIndex = -1;
     this._isOpen = this._filteredItems.length > 0;
   }

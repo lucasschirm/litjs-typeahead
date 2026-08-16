@@ -242,6 +242,40 @@ suite('lit-typeahead', () => {
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
   });
 
+  test('resets the filter after selecting an item', async () => {
+    const el = (await fixture(
+      html`<lit-typeahead
+        items='["United States", "Canada", "Mexico"]'
+      ></lit-typeahead>`
+    )) as LitTypeahead;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('input')!;
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+
+    // Narrow the list with a query.
+    input.value = 'ca';
+    input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+    await el.updateComplete;
+    assert.equal(el.shadowRoot!.querySelectorAll('.dropdown li').length, 1);
+
+    // Select the only match.
+    const option = el.shadowRoot!.querySelector('.dropdown li') as HTMLElement;
+    option.click();
+    await el.updateComplete;
+    assert.equal(el.value, 'Canada');
+    assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
+
+    // Reopening the dropdown shows the full list, not the stale filter.
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    const options = el.shadowRoot!.querySelectorAll('.dropdown li');
+    assert.equal(options.length, 3);
+    assert.equal(options[0].textContent?.trim(), 'United States');
+    assert.equal(options[2].textContent?.trim(), 'Mexico');
+  });
+
   test('closes the dropdown on blur', async () => {
     const el = (await fixture(
       html`<lit-typeahead
