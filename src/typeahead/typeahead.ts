@@ -15,6 +15,11 @@ let listIdCounter = 0;
  * By default it renders an `<input>` with a custom dropdown. Set `use-native`
  * to fall back to the legacy `<input>` + `<datalist>` implementation.
  *
+ * The input acts as a search box that is separate from the selection: opening
+ * the dropdown clears the input so the user can type, and closing it without
+ * selecting an item restores the previous value. The value only changes when
+ * an item is selected from the dropdown.
+ *
  * The custom dropdown renders a toggle icon to the right of the input. The
  * default icon is an animated chevron that points down when the dropdown is
  * closed and up when it is open. Consumers can replace the icon by slotting
@@ -26,8 +31,9 @@ let listIdCounter = 0;
  * </lit-typeahead>
  * ```
  *
- * @fires change - Fired when the user selects or types a value. The selected
- * value is available on `event.detail.value`.
+ * @fires change - Fired when an item is selected from the custom dropdown, or
+ * when the value of the native datalist input changes. The selected value is
+ * available on `event.detail.value`.
  * @fires item-selected - Fired when an item is selected from the custom
  * dropdown, or when the value of the native datalist input matches an item.
  * The selected value is available on `event.detail.value`.
@@ -83,20 +89,12 @@ export class LitTypeahead extends LitElement {
       margin: 0;
       width: calc(var(--typeahead-icon-size, 18px) + 10px);
       height: calc(var(--typeahead-icon-size, 18px) + 10px);
-      /* Keep the icon visually anchored but allow the cursor to reach it. */
+      /* The chevron is a visual indicator, not a button: it stays plain and
+         never gains a button-like background on hover. */
       background: transparent;
       border: 0;
       color: var(--typeahead-icon-color, #000);
       cursor: pointer;
-      border-radius: 4px;
-      transition: background-color 180ms ease;
-    }
-
-    .toggle-icon:hover {
-      background-color: var(
-        --typeahead-icon-background-hover,
-        rgba(0, 0, 0, 0.06)
-      );
     }
 
     .toggle-icon:focus-visible {
@@ -131,8 +129,7 @@ export class LitTypeahead extends LitElement {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .toggle-icon-svg .chevron,
-      .toggle-icon {
+      .toggle-icon-svg .chevron {
         animation: none;
         transition: none;
       }
@@ -153,13 +150,18 @@ export class LitTypeahead extends LitElement {
       background-color: var(--typeahead-background-color, #fff);
       border: 1px solid var(--typeahead-border-color, #767676);
       border-radius: var(--typeahead-border-radius, 4px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px
+        var(--typeahead-shadow-color, rgba(0, 0, 0, 0.15));
     }
 
     .dropdown li {
       padding: var(--typeahead-option-padding, 8px);
       cursor: pointer;
       color: var(--typeahead-text-color, #000);
+    }
+
+    .dropdown li.is-selected {
+      background-color: var(--typeahead-selected-color, #d3e3fd);
     }
 
     .dropdown li.active,
@@ -180,7 +182,7 @@ export class LitTypeahead extends LitElement {
   /** When true, the first item is selected by default. */
   @property({type: Boolean, attribute: 'select-first'}) selectFirst = false;
 
-  /** Current value of the input. */
+  /** Currently selected item. Only changes when an item is selected. */
   @property({type: String}) value = '';
 
   /**
@@ -192,6 +194,8 @@ export class LitTypeahead extends LitElement {
   @state() private _isOpen = false;
   @state() private _filteredItems: string[] = [];
   @state() private _activeIndex = -1;
+  /** Transient search text; never part of the value. */
+  @state() private _searchText = '';
 
   private readonly _listId = `lit-typeahead-list-${listIdCounter++}`;
   private readonly _listboxId = `lit-typeahead-listbox-${listIdCounter++}`;
@@ -206,12 +210,8 @@ export class LitTypeahead extends LitElement {
       this.value = this.items[0];
     }
 
-    if (
-      changed.has('items') ||
-      changed.has('value') ||
-      changed.has('selectFirst')
-    ) {
-      this._filteredItems = this._filterItems(this.value);
+    if (changed.has('items') || changed.has('selectFirst')) {
+      this._filteredItems = this._filterItems(this._searchText);
       if (this._activeIndex >= this._filteredItems.length) {
         this._activeIndex = -1;
       }
@@ -267,13 +267,12 @@ export class LitTypeahead extends LitElement {
             aria-activedescendant=${this._activeIndex >= 0
               ? `${this._listboxId}-${this._activeIndex}`
               : nothing}
-            .value=${this.value}
+            .value=${this._isOpen ? this._searchText : this.value}
             @input=${this._handleInput}
             @keydown=${this._handleKeydown}
             @focus=${this._handleFocus}
             @blur=${this._handleBlur}
             @click=${this._handleInputClick}
-            @change=${this._handleCustomChange}
           />
           <button
             type="button"
@@ -316,21 +315,27 @@ export class LitTypeahead extends LitElement {
                 role="listbox"
                 @mousedown=${this._handleListMouseDown}
               >
-                ${this._filteredItems.map(
-                  (item, index) => html`
+                ${this._filteredItems.map((item, index) => {
+                  const itemClasses = [
+                    index === this._activeIndex ? 'active' : '',
+                    item === this.value ? 'is-selected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+                  return html`
                     <li
                       id=${`${this._listboxId}-${index}`}
                       role="option"
                       aria-selected=${index === this._activeIndex
                         ? 'true'
                         : 'false'}
-                      class=${index === this._activeIndex ? 'active' : ''}
+                      class=${itemClasses}
                       @click=${() => this._selectItem(item)}
                     >
                       ${item}
                     </li>
-                  `
-                )}
+                  `;
+                })}
               </ul>
             `
           : nothing}
@@ -349,18 +354,12 @@ export class LitTypeahead extends LitElement {
   }
 
   private _handleInput(event: Event) {
+    // Typing only drives the search; it never changes the selection.
     const input = event.target as HTMLInputElement;
-    this.value = input.value;
+    this._searchText = input.value;
     this._filteredItems = this._filterItems(input.value);
     this._activeIndex = -1;
     this._isOpen = this._filteredItems.length > 0;
-  }
-
-  private _handleCustomChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.value = input.value;
-    this._closeDropdown();
-    this._dispatchChange(this.value);
   }
 
   private _handleFocus() {
@@ -397,13 +396,6 @@ export class LitTypeahead extends LitElement {
       return;
     }
     this._openDropdown();
-    // Move focus into the input so the user can immediately type after
-    // clicking the icon (the input typically already has focus in the real
-    // browser, so this is a no-op there).
-    const input = this.shadowRoot?.querySelector('input');
-    if (input instanceof HTMLInputElement) {
-      input.focus();
-    }
   }
 
   private _handleKeydown(event: KeyboardEvent) {
@@ -434,12 +426,15 @@ export class LitTypeahead extends LitElement {
             : this._activeIndex - 1;
         break;
       case 'Enter':
+        event.preventDefault();
         if (
           this._activeIndex >= 0 &&
           this._activeIndex < this._filteredItems.length
         ) {
-          event.preventDefault();
           this._selectItem(this._filteredItems[this._activeIndex]);
+        } else {
+          // No item highlighted: treat Enter as closing without selecting.
+          this._closeDropdown();
         }
         break;
       case 'Escape':
@@ -464,20 +459,27 @@ export class LitTypeahead extends LitElement {
       return;
     }
 
-    // When the input already holds a complete item (for example right after
-    // one was selected), reset the filter and show the full list instead of
-    // narrowing it down to the selected item again.
-    this._filteredItems =
-      this._findMatchingItem(this.value) !== undefined
-        ? [...this.items]
-        : this._filterItems(this.value);
+    // Opening starts a fresh search: clear the input and show every item so
+    // the user can type and arrow through the full list.
+    this._searchText = '';
+    this._filteredItems = this._filterItems('');
     this._activeIndex = -1;
-    this._isOpen = this._filteredItems.length > 0;
+    this._isOpen = true;
+
+    // Ensure the input is focused so the user can type immediately (mainly
+    // needed when the dropdown was opened via the toggle icon).
+    const input = this.shadowRoot?.querySelector('input');
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+    }
   }
 
   private _closeDropdown() {
     this._isOpen = false;
     this._activeIndex = -1;
+    // Discard any transient search text and restore the input to the
+    // selected value, unless an item was actually selected.
+    this._searchText = this.value;
   }
 
   private _filterItems(value: string): string[] {
