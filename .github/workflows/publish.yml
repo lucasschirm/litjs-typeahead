@@ -21,7 +21,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       # Note: do NOT set registry-url here. setup-node would write an empty
       # _authToken line to .npmrc, which makes npm skip the OIDC trusted
