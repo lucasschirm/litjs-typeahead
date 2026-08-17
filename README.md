@@ -71,6 +71,10 @@ The `items` property accepts an array of strings **or** an array of objects
 with `label` and `value` properties. The `label` is shown in the dropdown;
 the `value` is what gets stored in the component's `value` property.
 
+After selecting an object item, the input displays the item's `label` (not
+its `value`), while the `value` property keeps the item's `value`. Setting an
+initial `value` that matches an item shows that item's label in the input too.
+
 ```ts
 import {LitElement, html} from 'lit';
 import {customElement} from 'lit/decorators.js';
@@ -121,6 +125,10 @@ private _onChange(event: CustomEvent<{value: string | TypeaheadItem}>) {
 ```
 
 The `item-selected` event always emits the selected value as a string.
+
+If the dropdown is closed while the input keeps focus (for example right
+after selecting an item with the keyboard) and you start typing, the dropdown
+reopens and searches from the newly typed text.
 
 This template is generated from the `lit-starter-ts` package in [the main Lit
 repo](https://github.com/lit/lit). Issues and PRs for this template should be

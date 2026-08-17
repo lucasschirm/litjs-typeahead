@@ -26,8 +26,11 @@ let listIdCounter = 0;
  *
  * The input acts as a search box that is separate from the selection: opening
  * the dropdown clears the input so the user can type, and closing it without
- * selecting an item restores the previous value. The value only changes when
- * an item is selected from the dropdown.
+ * selecting an item restores the previous display (the selected item's label
+ * for object items, or its value otherwise). The value only changes when an
+ * item is selected from the dropdown. If the dropdown is closed while the
+ * input keeps focus and the user starts typing, it reopens with a fresh
+ * search.
  *
  * The custom dropdown renders a toggle icon to the right of the input. The
  * default icon is an animated chevron that points down when the dropdown is
@@ -205,8 +208,8 @@ export class LitTypeahead extends LitElement {
 
   /**
    * Currently selected value. For object items this is the item's `value`;
-   * for string items it is the string itself. Only changes when an item is
-   * selected.
+   * for string items it is the string itself. The input displays the selected
+   * item's `label` for object items. Only changes when an item is selected.
    */
   @property({type: String}) value = '';
 
@@ -221,6 +224,11 @@ export class LitTypeahead extends LitElement {
   @state() private _activeIndex = -1;
   /** Transient search text; never part of the value. */
   @state() private _searchText = '';
+  /**
+   * The selected item (or the item matching `value`), always kept as the whole
+   * item object/string so the input can display its label.
+   */
+  @state() private _selectedItem: string | TypeaheadItem | undefined;
 
   private readonly _listId = `lit-typeahead-list-${listIdCounter++}`;
   private readonly _listboxId = `lit-typeahead-listbox-${listIdCounter++}`;
@@ -233,6 +241,10 @@ export class LitTypeahead extends LitElement {
       this.items.length > 0
     ) {
       this.value = this._itemValue(this.items[0]);
+    }
+
+    if (changed.has('value') || changed.has('items')) {
+      this._selectedItem = this._findItemByValue(this.value);
     }
 
     if (changed.has('items') || changed.has('selectFirst')) {
@@ -264,7 +276,7 @@ export class LitTypeahead extends LitElement {
         list=${this._listId}
         placeholder=${this.placeholder || nothing}
         aria-label=${this.placeholder || this.name || nothing}
-        .value=${this.value}
+        .value=${this._displayValue}
         @change=${this._handleNativeChange}
       />
       <datalist id=${this._listId}>
@@ -297,7 +309,7 @@ export class LitTypeahead extends LitElement {
             aria-activedescendant=${this._activeIndex >= 0
               ? `${this._listboxId}-${this._activeIndex}`
               : nothing}
-            .value=${this._isOpen ? this._searchText : this.value}
+            .value=${this._isOpen ? this._searchText : this._displayValue}
             @input=${this._handleInput}
             @keydown=${this._handleKeydown}
             @focus=${this._handleFocus}
@@ -375,9 +387,10 @@ export class LitTypeahead extends LitElement {
 
   private _handleNativeChange(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.value = input.value;
-    const matchingItem = this._findMatchingItem(this.value);
-    this._dispatchChange(matchingItem ?? this.value);
+    const matchingItem = this._findMatchingItem(input.value);
+    this.value =
+      matchingItem !== undefined ? this._itemValue(matchingItem) : input.value;
+    this._dispatchChange(matchingItem ?? input.value);
 
     if (matchingItem !== undefined) {
       this._dispatchItemSelected(this._itemValue(matchingItem));
@@ -387,6 +400,19 @@ export class LitTypeahead extends LitElement {
   private _handleInput(event: Event) {
     // Typing only drives the search; it never changes the selection.
     const input = event.target as HTMLInputElement;
+    if (!this._isOpen) {
+      // The dropdown was closed while the input kept focus (e.g. after a
+      // keyboard selection). The input was showing the selected item's
+      // display, so start a fresh search from the text the user entered,
+      // stripping the previously shown selection when they appended to it.
+      const display = this._displayValue;
+      const query =
+        display !== '' && input.value.startsWith(display)
+          ? input.value.slice(display.length)
+          : input.value;
+      this._openDropdown(query);
+      return;
+    }
     this._searchText = input.value;
     this._filteredItems = this._filterItems(input.value);
     this._activeIndex = -1;
@@ -484,16 +510,28 @@ export class LitTypeahead extends LitElement {
     this._dispatchItemSelected(this._itemValue(item));
   }
 
-  private _openDropdown() {
+  /**
+   * The text shown in the input when the dropdown is closed: the selected
+   * item's label for object items (the item itself for string items), or the
+   * raw value when nothing matches an item.
+   */
+  private get _displayValue(): string {
+    return this._selectedItem !== undefined
+      ? this._itemLabel(this._selectedItem)
+      : this.value;
+  }
+
+  private _openDropdown(searchText = '') {
     if (this.items.length === 0) {
       this._isOpen = false;
       return;
     }
 
-    // Opening starts a fresh search: clear the input and show every item so
-    // the user can type and arrow through the full list.
-    this._searchText = '';
-    this._filteredItems = this._filterItems('');
+    // Opening starts a fresh search: clear the input (or apply the given
+    // search text) and show the matching items so the user can type and arrow
+    // through the list.
+    this._searchText = searchText;
+    this._filteredItems = this._filterItems(searchText);
     this._activeIndex = -1;
     this._isOpen = true;
 
@@ -509,8 +547,8 @@ export class LitTypeahead extends LitElement {
     this._isOpen = false;
     this._activeIndex = -1;
     // Discard any transient search text and restore the input to the
-    // selected value, unless an item was actually selected.
-    this._searchText = this.value;
+    // selected item's display (its label for object items).
+    this._searchText = this._displayValue;
   }
 
   private _filterItems(value: string): TypeaheadItems {
@@ -524,6 +562,15 @@ export class LitTypeahead extends LitElement {
   }
 
   private _findMatchingItem(value: string): string | TypeaheadItem | undefined {
+    const query = value.trim().toLowerCase();
+    return this.items.find(
+      (item) =>
+        this._itemValue(item).toLowerCase() === query ||
+        this._itemLabel(item).toLowerCase() === query
+    );
+  }
+
+  private _findItemByValue(value: string): string | TypeaheadItem | undefined {
     const query = value.trim().toLowerCase();
     return this.items.find(
       (item) => this._itemValue(item).toLowerCase() === query

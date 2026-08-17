@@ -97,6 +97,7 @@
         name="country"
         items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
       ></lit-typeahead>
+      <p>The input shows the selected item's label; the <code>value</code> property holds the item's value.</p>
       <p>Emitted value on <code>change</code>:</p>
       <pre class="output" id="country-objects-output">&mdash;</pre>
       <div class="spacer"></div>
@@ -110,6 +111,7 @@
         items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
         emit-object
       ></lit-typeahead>
+      <p>The input shows the selected item's label; the <code>change</code> event emits the whole object.</p>
       <p>Emitted value on <code>change</code> (the whole object):</p>
       <pre class="output" id="country-objects-emit-output">&mdash;</pre>
       <div class="spacer"></div>
