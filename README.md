@@ -37,17 +37,12 @@ export class MyApp extends LitElement {
         .items=${this._items}
         placeholder="Select a country"
         @change=${this._onChange}
-        @item-selected=${this._onItemSelected}
       ></lit-typeahead>
     `;
   }
 
   private _onChange(event: CustomEvent<{value: string}>) {
     console.log('Value:', event.detail.value);
-  }
-
-  private _onItemSelected(event: CustomEvent<{value: string}>) {
-    console.log('Selected:', event.detail.value);
   }
 }
 ```
@@ -123,8 +118,6 @@ private _onChange(event: CustomEvent<{value: string | TypeaheadItem}>) {
   console.log('Selected item:', event.detail.value);
 }
 ```
-
-The `item-selected` event always emits the selected value as a string.
 
 If the dropdown is closed while the input keeps focus (for example right
 after selecting an item with the keyboard) and you start typing, the dropdown
