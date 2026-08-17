@@ -51,10 +51,14 @@ jobs:
             echo "number=${{ inputs.pr_number }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # The published demo lives in pages/index.html (the Freebuff preview
+      # deploy uses the same source), so deploy that plus the freshly built
+      # bundle.
       - name: Stage preview files
         run: |
           mkdir -p _preview
-          cp index.html typeahead.bundled.js _preview/
+          cp pages/index.html _preview/index.html
+          cp typeahead.bundled.js _preview/
           touch _preview/.nojekyll
 
       # Deploys only pr-preview/pr-<N> on the gh-pages branch: the action
