@@ -1,7 +1,7 @@
 {
   "name": "@lucasschirm/litjs-typeahead",
   "public": true,
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "A Lit-based typeahead web component",
   "main": "typeahead/index.js",
   "module": "typeahead/index.js",
