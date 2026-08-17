@@ -1,0 +1,76 @@
+name: Deploy PR preview to GitHub Pages
+
+"on":
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to deploy the preview for
+        required: true
+        type: number
+
+permissions:
+  contents: write
+
+# Only one deploy per PR at a time; cancel superseded runs so the latest
+# commit always wins.
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build component and bundle
+        run: |
+          pnpm run build
+          pnpm exec rollup -c
+
+      - name: Resolve PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The published demo lives in pages/index.html (the Freebuff preview
+      # deploy uses the same source), so deploy that plus the freshly built
+      # bundle.
+      - name: Stage preview files
+        run: |
+          mkdir -p _preview
+          cp pages/index.html _preview/index.html
+          cp typeahead.bundled.js _preview/
+          touch _preview/.nojekyll
+
+      # Deploys only pr-preview/pr-<N> on the gh-pages branch: the action
+      # cleans that destination dir and leaves the site root and the other
+      # previews untouched. GitHub Pages then serves the preview at
+      # https://<owner>.github.io/<repo>/pr-preview/pr-<N>/.
+      - name: Deploy preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _preview
+          destination_dir: pr-preview/pr-${{ steps.pr.outputs.number }}
+          full_commit_message: Deploy preview for PR ${{ steps.pr.outputs.number }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com

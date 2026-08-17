@@ -65,6 +65,71 @@ You can also use the named export if you prefer:
 import {LitTypeahead} from '@lucasschirm/litjs-typeahead';
 ```
 
+### Items: strings or objects
+
+The `items` property accepts an array of strings **or** an array of objects
+with `label` and `value` properties. The `label` is shown in the dropdown;
+the `value` is what gets stored in the component's `value` property.
+
+After selecting an object item, the input displays the item's `label` (not
+its `value`), while the `value` property keeps the item's `value`. Setting an
+initial `value` that matches an item shows that item's label in the input too.
+
+```ts
+import {LitElement, html} from 'lit';
+import {customElement} from 'lit/decorators.js';
+import LitTypeahead, {type TypeaheadItem} from '@lucasschirm/litjs-typeahead';
+
+@customElement('my-app')
+export class MyApp extends LitElement {
+  private _items: TypeaheadItem[] = [
+    {label: 'United States', value: 'US'},
+    {label: 'Canada', value: 'CA'},
+    {label: 'Mexico', value: 'MX'},
+  ];
+
+  render() {
+    return html`
+      <lit-typeahead
+        .items=${this._items}
+        placeholder="Select a country"
+        @change=${this._onChange}
+      ></lit-typeahead>
+    `;
+  }
+
+  private _onChange(event: CustomEvent<{value: string | TypeaheadItem}>) {
+    console.log('Value:', event.detail.value);
+  }
+}
+```
+
+### `emit-object` property
+
+The `emit-object` boolean property (attribute `emit-object`, default `false`)
+controls what the `change` event emits on `event.detail.value`:
+
+- `false` (default): emits only the selected value as a string.
+- `true`: emits the whole selected item object (`{label, value}`) for object
+  items. For string items it emits the string itself.
+
+```html
+<lit-typeahead .items=${this._items} emit-object @change=${this._onChange}></lit-typeahead>
+```
+
+```ts
+private _onChange(event: CustomEvent<{value: string | TypeaheadItem}>) {
+  // With emit-object, detail.value is the full {label, value} object.
+  console.log('Selected item:', event.detail.value);
+}
+```
+
+The `item-selected` event always emits the selected value as a string.
+
+If the dropdown is closed while the input keeps focus (for example right
+after selecting an item with the keyboard) and you start typing, the dropdown
+reopens and searches from the newly typed text.
+
 This template is generated from the `lit-starter-ts` package in [the main Lit
 repo](https://github.com/lit/lit). Issues and PRs for this template should be
 filed in that repo.

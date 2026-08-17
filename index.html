@@ -81,6 +81,20 @@
       lit-typeahead {
         max-width: 320px;
       }
+
+      p.hint {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      pre.output {
+        margin: 12px 0 0;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text);
+        min-height: 20px;
+      }
     </style>
   </head>
   <body>
@@ -167,12 +181,50 @@
   value="United States"
 &gt;&lt;/lit-typeahead&gt;</code></pre>
       </section>
+
+      <section>
+        <h2>Object items (emits only the value by default)</h2>
+        <lit-typeahead
+          id="country-objects"
+          name="country"
+          items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+        ></lit-typeahead>
+        <p class="hint">Items can be objects <code>{label, value}</code> &mdash; the label is shown in the dropdown and in the input after selection, the value is emitted on <code>change</code>.</p>
+        <pre class="output" id="country-objects-output">&mdash; emitted <code>change</code> payload</pre>
+        <pre><code>&lt;lit-typeahead
+  id="country-objects"
+  name="country"
+  items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>Object items with <code>emit-object</code></h2>
+        <lit-typeahead
+          id="country-objects-emit"
+          name="country"
+          items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+          emit-object
+        ></lit-typeahead>
+        <p class="hint"><code>emit-object</code> makes <code>change</code> emit the whole item object; the input still shows the item's label.</p>
+        <pre class="output" id="country-objects-emit-output">&mdash; emitted <code>change</code> payload</pre>
+        <pre><code>&lt;lit-typeahead
+  id="country-objects-emit"
+  name="country"
+  items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+  emit-object
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
     </main>
 
     <script type="module">
       document.querySelectorAll('lit-typeahead').forEach((el) => {
         el.addEventListener('change', (event) => {
           console.log(el.id, 'change', event.detail.value);
+          const output = document.getElementById(`${el.id}-output`);
+          if (output) {
+            output.textContent = JSON.stringify(event.detail.value);
+          }
         });
       });
     </script>
