@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {LitTypeahead} from './typeahead.js';
+import {LitTypeahead, type TypeaheadItem, type TypeaheadItems} from './typeahead.js';
 
-export {LitTypeahead};
+export {LitTypeahead, type TypeaheadItem, type TypeaheadItems};
 export default LitTypeahead;

@@ -444,6 +444,246 @@ suite('lit-typeahead', () => {
     assert.equal(selected, false);
   });
 
+  suite('object items', () => {
+    const objectItems =
+      '[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]';
+
+    test('renders object items by label in the custom dropdown', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead items='${objectItems}'></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      const options = el.shadowRoot!.querySelectorAll('.dropdown li');
+      assert.equal(options.length, 3);
+      assert.equal(options[0].textContent?.trim(), 'United States');
+      assert.equal(options[1].textContent?.trim(), 'Canada');
+      assert.equal(options[2].textContent?.trim(), 'Mexico');
+    });
+
+    test('selecting an object item emits its value by default', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead items='${objectItems}'></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      const changePromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('change', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+
+      const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
+      option.click();
+      await el.updateComplete;
+
+      const changeEvent = await changePromise;
+      assert.equal(changeEvent.detail.value, 'CA');
+      assert.equal(el.value, 'CA');
+    });
+
+    test('emit-object emits the whole item object on change', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          items='${objectItems}'
+          emit-object
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      const changePromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('change', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+      const selectedPromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('item-selected', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+
+      const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
+      option.click();
+      await el.updateComplete;
+
+      const [changeEvent, selectedEvent] = await Promise.all([
+        changePromise,
+        selectedPromise,
+      ]);
+      assert.deepEqual(changeEvent.detail.value, {label: 'Canada', value: 'CA'});
+      // item-selected always emits the value string.
+      assert.equal(selectedEvent.detail.value, 'CA');
+      assert.equal(el.value, 'CA');
+    });
+
+    test('emit-object with string items still emits the value string', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          items='["United States", "Canada", "Mexico"]'
+          emit-object
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      const changePromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('change', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+
+      const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
+      option.click();
+      await el.updateComplete;
+
+      const changeEvent = await changePromise;
+      assert.equal(changeEvent.detail.value, 'Canada');
+    });
+
+    test('filters object items by label while typing', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead items='${objectItems}'></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      input.value = 'ca';
+      input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+      await el.updateComplete;
+
+      const options = el.shadowRoot!.querySelectorAll('.dropdown li');
+      assert.equal(options.length, 1);
+      assert.equal(options[0].textContent?.trim(), 'Canada');
+    });
+
+    test('renders object items as datalist options with label text and value', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          use-native
+          items='${objectItems}'
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const options = el.shadowRoot!.querySelectorAll('datalist option');
+      assert.equal(options.length, 3);
+      assert.equal(options[0].getAttribute('value'), 'US');
+      assert.equal(options[0].textContent?.trim(), 'United States');
+      assert.equal(options[1].getAttribute('value'), 'CA');
+      assert.equal(options[1].textContent?.trim(), 'Canada');
+    });
+
+    test('emits the matching object on change in native mode with emit-object', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          use-native
+          items='${objectItems}'
+          emit-object
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      const changePromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('change', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+      const selectedPromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('item-selected', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+
+      input.value = 'CA';
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+      await el.updateComplete;
+
+      const [changeEvent, selectedEvent] = await Promise.all([
+        changePromise,
+        selectedPromise,
+      ]);
+      assert.deepEqual(changeEvent.detail.value, {label: 'Canada', value: 'CA'});
+      assert.equal(selectedEvent.detail.value, 'CA');
+      assert.equal(el.value, 'CA');
+    });
+
+    test('emits the raw value in native mode when nothing matches', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          use-native
+          items='${objectItems}'
+          emit-object
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      const changePromise = new Promise<CustomEvent>((resolve) => {
+        el.addEventListener('change', (event) =>
+          resolve(event as CustomEvent)
+        );
+      });
+
+      input.value = 'Unknown';
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+      await el.updateComplete;
+
+      const changeEvent = await changePromise;
+      assert.equal(changeEvent.detail.value, 'Unknown');
+    });
+
+    test('selects the first object item value when select-first is set', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          items='${objectItems}'
+          select-first
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      assert.equal(el.value, 'US');
+      const input = el.shadowRoot!.querySelector('input')!;
+      assert.equal(input.value, 'US');
+    });
+
+    test('marks the selected object item with the is-selected class', async () => {
+      const el = (await fixture(
+        html`<lit-typeahead
+          items='${objectItems}'
+          value="CA"
+        ></lit-typeahead>`
+      )) as LitTypeahead;
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector('input')!;
+      input.dispatchEvent(new Event('focus'));
+      await el.updateComplete;
+
+      const selected = el.shadowRoot!.querySelector('.dropdown li.is-selected');
+      assert.ok(selected);
+      assert.equal(selected!.textContent?.trim(), 'Canada');
+    });
+  });
+
   suite('toggle icon', () => {
     test('renders a default triangle SVG inside a named slot', async () => {
       const el = (await fixture(

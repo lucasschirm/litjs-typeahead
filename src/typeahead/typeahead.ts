@@ -7,6 +7,15 @@
 import {LitElement, html, css, nothing, type PropertyValues} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 
+/** An item with a display label and a value used for selection. */
+export interface TypeaheadItem {
+  label: string;
+  value: string;
+}
+
+/** A list of options; each option can be a plain string or an object. */
+export type TypeaheadItems = Array<string | TypeaheadItem>;
+
 let listIdCounter = 0;
 
 /**
@@ -33,7 +42,9 @@ let listIdCounter = 0;
  *
  * @fires change - Fired when an item is selected from the custom dropdown, or
  * when the value of the native datalist input changes. The selected value is
- * available on `event.detail.value`.
+ * available on `event.detail.value`. By default the value is a string; when
+ * `emit-object` is set, the whole item object (`{label, value}`) is emitted
+ * instead.
  * @fires item-selected - Fired when an item is selected from the custom
  * dropdown, or when the value of the native datalist input matches an item.
  * The selected value is available on `event.detail.value`.
@@ -173,8 +184,18 @@ export class LitTypeahead extends LitElement {
   /** Name applied to the underlying `<input>`, used when submitting a form. */
   @property({type: String}) name = '';
 
-  /** List of options shown to the user. */
-  @property({type: Array}) items: string[] = [];
+  /**
+   * List of options shown to the user. Each option can be a plain string or
+   * an object with `label` and `value` properties. The label is displayed in
+   * the dropdown; the value is used for selection.
+   */
+  @property({type: Array}) items: TypeaheadItems = [];
+
+  /**
+   * When true, the `change` event emits the whole selected item object
+   * (`{label, value}`) instead of just its value string.
+   */
+  @property({type: Boolean, attribute: 'emit-object'}) emitObject = false;
 
   /** Placeholder text shown in the input when it is empty. */
   @property({type: String}) placeholder = '';
@@ -182,7 +203,11 @@ export class LitTypeahead extends LitElement {
   /** When true, the first item is selected by default. */
   @property({type: Boolean, attribute: 'select-first'}) selectFirst = false;
 
-  /** Currently selected item. Only changes when an item is selected. */
+  /**
+   * Currently selected value. For object items this is the item's `value`;
+   * for string items it is the string itself. Only changes when an item is
+   * selected.
+   */
   @property({type: String}) value = '';
 
   /**
@@ -192,7 +217,7 @@ export class LitTypeahead extends LitElement {
   @property({type: Boolean, attribute: 'use-native'}) useNative = false;
 
   @state() private _isOpen = false;
-  @state() private _filteredItems: string[] = [];
+  @state() private _filteredItems: TypeaheadItems = [];
   @state() private _activeIndex = -1;
   /** Transient search text; never part of the value. */
   @state() private _searchText = '';
@@ -207,7 +232,7 @@ export class LitTypeahead extends LitElement {
       !this.value &&
       this.items.length > 0
     ) {
-      this.value = this.items[0];
+      this.value = this._itemValue(this.items[0]);
     }
 
     if (changed.has('items') || changed.has('selectFirst')) {
@@ -243,7 +268,12 @@ export class LitTypeahead extends LitElement {
         @change=${this._handleNativeChange}
       />
       <datalist id=${this._listId}>
-        ${this.items.map((item) => html`<option value=${item}></option>`)}
+        ${this.items.map(
+          (item) =>
+            html`<option value=${this._itemValue(item)}
+              >${this._itemLabel(item)}</option
+            >`
+        )}
       </datalist>
     `;
   }
@@ -318,7 +348,7 @@ export class LitTypeahead extends LitElement {
                 ${this._filteredItems.map((item, index) => {
                   const itemClasses = [
                     index === this._activeIndex ? 'active' : '',
-                    item === this.value ? 'is-selected' : '',
+                    this._itemValue(item) === this.value ? 'is-selected' : '',
                   ]
                     .filter(Boolean)
                     .join(' ');
@@ -332,7 +362,7 @@ export class LitTypeahead extends LitElement {
                       class=${itemClasses}
                       @click=${() => this._selectItem(item)}
                     >
-                      ${item}
+                      ${this._itemLabel(item)}
                     </li>
                   `;
                 })}
@@ -346,10 +376,11 @@ export class LitTypeahead extends LitElement {
   private _handleNativeChange(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = input.value;
-    this._dispatchChange(this.value);
+    const matchingItem = this._findMatchingItem(this.value);
+    this._dispatchChange(matchingItem ?? this.value);
 
-    if (this._findMatchingItem(this.value) !== undefined) {
-      this._dispatchItemSelected(this.value);
+    if (matchingItem !== undefined) {
+      this._dispatchItemSelected(this._itemValue(matchingItem));
     }
   }
 
@@ -446,11 +477,11 @@ export class LitTypeahead extends LitElement {
     }
   }
 
-  private _selectItem(item: string) {
-    this.value = item;
+  private _selectItem(item: string | TypeaheadItem) {
+    this.value = this._itemValue(item);
     this._closeDropdown();
     this._dispatchChange(item);
-    this._dispatchItemSelected(item);
+    this._dispatchItemSelected(this._itemValue(item));
   }
 
   private _openDropdown() {
@@ -482,23 +513,37 @@ export class LitTypeahead extends LitElement {
     this._searchText = this.value;
   }
 
-  private _filterItems(value: string): string[] {
+  private _filterItems(value: string): TypeaheadItems {
     const query = value.trim().toLowerCase();
     if (query === '') {
       return [...this.items];
     }
-    return this.items.filter((item) => item.toLowerCase().includes(query));
+    return this.items.filter((item) =>
+      this._itemLabel(item).toLowerCase().includes(query)
+    );
   }
 
-  private _findMatchingItem(value: string): string | undefined {
+  private _findMatchingItem(value: string): string | TypeaheadItem | undefined {
     const query = value.trim().toLowerCase();
-    return this.items.find((item) => item.toLowerCase() === query);
+    return this.items.find(
+      (item) => this._itemValue(item).toLowerCase() === query
+    );
   }
 
-  private _dispatchChange(value: string) {
+  private _itemLabel(item: string | TypeaheadItem): string {
+    return typeof item === 'string' ? item : item.label;
+  }
+
+  private _itemValue(item: string | TypeaheadItem): string {
+    return typeof item === 'string' ? item : item.value;
+  }
+
+  private _dispatchChange(value: string | TypeaheadItem) {
     this.dispatchEvent(
       new CustomEvent('change', {
-        detail: {value},
+        // By default emit only the value; with emit-object emit the whole
+        // item (for string items that is the string itself).
+        detail: {value: this.emitObject ? value : this._itemValue(value)},
         bubbles: true,
         composed: true,
       })

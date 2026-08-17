@@ -22,6 +22,16 @@
       .spacer {
         height: 120px;
       }
+
+      pre.output {
+        background: #f4f4f4;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 8px 0 0;
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        min-height: 18px;
+      }
     </style>
   </head>
   <body>
@@ -81,6 +91,31 @@
     </section>
 
     <section>
+      <h2>Object items (emits only the value by default)</h2>
+      <lit-typeahead
+        id="country-objects"
+        name="country"
+        items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+      ></lit-typeahead>
+      <p>Emitted value on <code>change</code>:</p>
+      <pre class="output" id="country-objects-output">&mdash;</pre>
+      <div class="spacer"></div>
+    </section>
+
+    <section>
+      <h2>Object items with <code>emit-object</code></h2>
+      <lit-typeahead
+        id="country-objects-emit"
+        name="country"
+        items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+        emit-object
+      ></lit-typeahead>
+      <p>Emitted value on <code>change</code> (the whole object):</p>
+      <pre class="output" id="country-objects-emit-output">&mdash;</pre>
+      <div class="spacer"></div>
+    </section>
+
+    <section>
       <h2>With a custom <code>toggle-icon</code> slot override</h2>
       <lit-typeahead
         id="country-custom-icon"
@@ -117,6 +152,10 @@
       document.querySelectorAll('lit-typeahead').forEach((el) => {
         el.addEventListener('change', (event) => {
           console.log(el.id, 'change', event.detail.value);
+          const output = document.getElementById(`${el.id}-output`);
+          if (output) {
+            output.textContent = JSON.stringify(event.detail.value);
+          }
         });
         el.addEventListener('item-selected', (event) => {
           console.log(el.id, 'item-selected', event.detail.value);
