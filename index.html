@@ -1,0 +1,232 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>&lt;lit-typeahead&gt; Demo</title>
+    <script type="module" src="./typeahead.bundled.js"></script>
+    <style>
+      :root {
+        --text: #1f2328;
+        --muted: #59636e;
+        --border: #d1d9e0;
+        --accent: #0b5fff;
+        --bg: #f6f8fa;
+        --card: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        line-height: 1.5;
+      }
+
+      header {
+        padding: 48px 24px 24px;
+        text-align: center;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 2rem;
+        letter-spacing: -0.02em;
+      }
+
+      header p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 24px 64px;
+      }
+
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+
+      section h2 {
+        margin: 0 0 12px;
+        font-size: 1.15rem;
+      }
+
+      pre {
+        margin: 16px 0 0;
+        padding: 12px;
+        overflow-x: auto;
+        background: #0d1117;
+        color: #e6edf3;
+        border-radius: 6px;
+        font-size: 0.85rem;
+      }
+
+      code {
+        font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
+          monospace;
+      }
+
+      lit-typeahead {
+        max-width: 320px;
+      }
+
+      p.hint {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      pre.output {
+        margin: 12px 0 0;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text);
+        min-height: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>&lt;lit-typeahead&gt;</h1>
+      <p>A Lit web component backed by a native <code>&lt;input&gt;</code> + <code>&lt;datalist&gt;</code></p>
+    </header>
+
+    <main>
+      <section>
+        <h2>Basic usage</h2>
+        <lit-typeahead
+          id="country"
+          name="country"
+          items='["United States", "Canada", "Mexico"]'
+        ></lit-typeahead>
+        <pre><code>&lt;lit-typeahead
+  id="country"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>Native datalist fallback</h2>
+        <lit-typeahead
+          id="country-native"
+          name="country"
+          use-native
+          items='["United States", "Canada", "Mexico"]'
+        ></lit-typeahead>
+        <pre><code>&lt;lit-typeahead
+  id="country-native"
+  name="country"
+  use-native
+  items='["United States", "Canada", "Mexico"]'
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>With placeholder</h2>
+        <lit-typeahead
+          id="country-placeholder"
+          name="country"
+          items='["United States", "Canada", "Mexico"]'
+          placeholder="Select a country"
+        ></lit-typeahead>
+        <pre><code>&lt;lit-typeahead
+  id="country-placeholder"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  placeholder="Select a country"
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>With select-first</h2>
+        <lit-typeahead
+          id="country-select-first"
+          name="country"
+          items='["United States", "Canada", "Mexico"]'
+          select-first
+        ></lit-typeahead>
+        <pre><code>&lt;lit-typeahead
+  id="country-select-first"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  select-first
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>With initial value</h2>
+        <lit-typeahead
+          id="country-value"
+          name="country"
+          items='["United States", "Canada", "Mexico"]'
+          value="United States"
+        ></lit-typeahead>
+        <pre><code>&lt;lit-typeahead
+  id="country-value"
+  name="country"
+  items='["United States", "Canada", "Mexico"]'
+  value="United States"
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>Object items (emits only the value by default)</h2>
+        <lit-typeahead
+          id="country-objects"
+          name="country"
+          items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+        ></lit-typeahead>
+        <p class="hint">Items can be objects <code>{label, value}</code> &mdash; the label is shown in the dropdown and in the input after selection, the value is emitted on <code>change</code>.</p>
+        <pre class="output" id="country-objects-output">&mdash; emitted <code>change</code> payload</pre>
+        <pre><code>&lt;lit-typeahead
+  id="country-objects"
+  name="country"
+  items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>Object items with <code>emit-object</code></h2>
+        <lit-typeahead
+          id="country-objects-emit"
+          name="country"
+          items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+          emit-object
+        ></lit-typeahead>
+        <p class="hint"><code>emit-object</code> makes <code>change</code> emit the whole item object; the input still shows the item's label.</p>
+        <pre class="output" id="country-objects-emit-output">&mdash; emitted <code>change</code> payload</pre>
+        <pre><code>&lt;lit-typeahead
+  id="country-objects-emit"
+  name="country"
+  items='[{"label": "United States", "value": "US"}, {"label": "Canada", "value": "CA"}, {"label": "Mexico", "value": "MX"}]'
+  emit-object
+&gt;&lt;/lit-typeahead&gt;</code></pre>
+      </section>
+    </main>
+
+    <script type="module">
+      document.querySelectorAll('lit-typeahead').forEach((el) => {
+        el.addEventListener('change', (event) => {
+          console.log(el.id, 'change', event.detail.value);
+          const output = document.getElementById(`${el.id}-output`);
+          if (output) {
+            output.textContent = JSON.stringify(event.detail.value);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
