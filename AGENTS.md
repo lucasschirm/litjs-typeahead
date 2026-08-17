@@ -17,6 +17,7 @@ A Lit 3 + TypeScript typeahead web component.
 - `src/test/typeahead_test.ts` — component tests
 - `dev/index.html` — dev demo page
 - `index.html` — site demo page (uses the `typeahead.bundled.js` bundle)
+- `.github/workflows/pr-preview.yml` — builds the component and deploys `pr-preview/pr-<N>` to the `gh-pages` branch on every push to a pull request
 - `docs-src/` — documentation site source (not currently built)
 
 ## Conventions
