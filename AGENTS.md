@@ -15,7 +15,8 @@ A Lit 3 + TypeScript typeahead web component.
 - `src/typeahead/typeahead.ts` — `LitTypeahead` class (no implementation yet)
 - `src/typeahead/index.ts` — defines `<lit-typeahead>` and re-exports the class
 - `src/test/typeahead_test.ts` — component tests
-- `dev/index.html` — demo page
+- `dev/index.html` — dev demo page
+- `index.html` — site demo page (uses the `typeahead.bundled.js` bundle)
 - `docs-src/` — documentation site source (not currently built)
 
 ## Conventions
@@ -24,6 +25,7 @@ A Lit 3 + TypeScript typeahead web component.
 - `module` is `esnext` and `moduleResolution` is `bundler` to support modern ESM package resolution.
 - `tsc` compiles `src/` into the repo root (`typeahead/`, `test/`).
 - Generated build artifacts (`typeahead/*.js`, `test/*.js`, `*.bundled.js`, `custom-elements.json`, `docs/`) are ignored; run `npm run build` when needed.
+- Keep docs in sync with the component: any change that impacts the component's usage or behavior must also update `README.md`, the demo pages (`dev/index.html` and `index.html`), and `src/test/typeahead_test.ts` (tests) in the same change.
 - Lint and docs scripts reference missing starter configs (`.eslintrc.json`, `.prettierrc.json`, `.eleventy.cjs`) and will not work until those are added.
 
 ## Verification
