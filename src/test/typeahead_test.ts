@@ -145,7 +145,7 @@ suite('lit-typeahead', () => {
     assert.equal(input.value, 'Canada');
   });
 
-  test('emits change and item-selected when an item is selected', async () => {
+  test('emits change when an item is selected', async () => {
     const el = (await fixture(
       html`<lit-typeahead
         items='["United States", "Canada", "Mexico"]'
@@ -160,22 +160,13 @@ suite('lit-typeahead', () => {
     const changePromise = new Promise<CustomEvent>((resolve) => {
       el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
-    const selectedPromise = new Promise<CustomEvent>((resolve) => {
-      el.addEventListener('item-selected', (event) =>
-        resolve(event as CustomEvent)
-      );
-    });
 
     const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
     option.click();
     await el.updateComplete;
 
-    const [changeEvent, selectedEvent] = await Promise.all([
-      changePromise,
-      selectedPromise,
-    ]);
+    const changeEvent = await changePromise;
     assert.equal(changeEvent.detail.value, 'Canada');
-    assert.equal(selectedEvent.detail.value, 'Canada');
     assert.equal(el.value, 'Canada');
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
   });
@@ -230,10 +221,8 @@ suite('lit-typeahead', () => {
     input.dispatchEvent(new Event('focus'));
     await el.updateComplete;
 
-    const selectedPromise = new Promise<CustomEvent>((resolve) => {
-      el.addEventListener('item-selected', (event) =>
-        resolve(event as CustomEvent)
-      );
+    const changePromise = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
 
     input.dispatchEvent(
@@ -271,7 +260,7 @@ suite('lit-typeahead', () => {
     );
     await el.updateComplete;
 
-    const event = await selectedPromise;
+    const event = await changePromise;
     assert.equal(event.detail.value, 'Canada');
     assert.equal(el.value, 'Canada');
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
@@ -289,17 +278,15 @@ suite('lit-typeahead', () => {
     input.dispatchEvent(new Event('focus'));
     await el.updateComplete;
 
-    const selectedPromise = new Promise<CustomEvent>((resolve) => {
-      el.addEventListener('item-selected', (event) =>
-        resolve(event as CustomEvent)
-      );
+    const changePromise = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
 
     const option = el.shadowRoot!.querySelectorAll('.dropdown li')[2] as HTMLElement;
     option.click();
     await el.updateComplete;
 
-    const event = await selectedPromise;
+    const event = await changePromise;
     assert.equal(event.detail.value, 'Mexico');
     assert.equal(el.value, 'Mexico');
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
@@ -447,7 +434,7 @@ suite('lit-typeahead', () => {
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
   });
 
-  test('emits item-selected when the native value matches an item', async () => {
+  test('emits change when the native value matches an item', async () => {
     const el = (await fixture(
       html`<lit-typeahead
         use-native
@@ -457,21 +444,19 @@ suite('lit-typeahead', () => {
     await el.updateComplete;
 
     const input = el.shadowRoot!.querySelector('input')!;
-    const selectedPromise = new Promise<CustomEvent>((resolve) => {
-      el.addEventListener('item-selected', (event) =>
-        resolve(event as CustomEvent)
-      );
+    const changePromise = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
 
     input.value = 'Canada';
     input.dispatchEvent(new Event('change', {bubbles: true}));
 
-    const event = await selectedPromise;
+    const event = await changePromise;
     assert.equal(event.detail.value, 'Canada');
     assert.equal(el.value, 'Canada');
   });
 
-  test('does not emit item-selected in native mode for a non-matching value', async () => {
+  test('emits change with the raw value in native mode when nothing matches', async () => {
     const el = (await fixture(
       html`<lit-typeahead
         use-native
@@ -481,16 +466,17 @@ suite('lit-typeahead', () => {
     await el.updateComplete;
 
     const input = el.shadowRoot!.querySelector('input')!;
-    let selected = false;
-    el.addEventListener('item-selected', () => {
-      selected = true;
+    const changePromise = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
 
     input.value = 'Unknown';
     input.dispatchEvent(new Event('change', {bubbles: true}));
     await el.updateComplete;
 
-    assert.equal(selected, false);
+    const changeEvent = await changePromise;
+    assert.equal(changeEvent.detail.value, 'Unknown');
+    assert.equal(el.value, 'Unknown');
   });
 
   suite('object items', () => {
@@ -559,23 +545,13 @@ suite('lit-typeahead', () => {
           resolve(event as CustomEvent)
         );
       });
-      const selectedPromise = new Promise<CustomEvent>((resolve) => {
-        el.addEventListener('item-selected', (event) =>
-          resolve(event as CustomEvent)
-        );
-      });
 
       const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
       option.click();
       await el.updateComplete;
 
-      const [changeEvent, selectedEvent] = await Promise.all([
-        changePromise,
-        selectedPromise,
-      ]);
+      const changeEvent = await changePromise;
       assert.deepEqual(changeEvent.detail.value, {label: 'Canada', value: 'CA'});
-      // item-selected always emits the value string.
-      assert.equal(selectedEvent.detail.value, 'CA');
       assert.equal(el.value, 'CA');
       // The input shows the label, not the value.
       assert.equal(input.value, 'Canada');
@@ -710,22 +686,13 @@ suite('lit-typeahead', () => {
           resolve(event as CustomEvent)
         );
       });
-      const selectedPromise = new Promise<CustomEvent>((resolve) => {
-        el.addEventListener('item-selected', (event) =>
-          resolve(event as CustomEvent)
-        );
-      });
 
       input.value = 'CA';
       input.dispatchEvent(new Event('change', {bubbles: true}));
       await el.updateComplete;
 
-      const [changeEvent, selectedEvent] = await Promise.all([
-        changePromise,
-        selectedPromise,
-      ]);
+      const changeEvent = await changePromise;
       assert.deepEqual(changeEvent.detail.value, {label: 'Canada', value: 'CA'});
-      assert.equal(selectedEvent.detail.value, 'CA');
       assert.equal(el.value, 'CA');
     });
 

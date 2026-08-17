@@ -48,9 +48,6 @@ let listIdCounter = 0;
  * available on `event.detail.value`. By default the value is a string; when
  * `emit-object` is set, the whole item object (`{label, value}`) is emitted
  * instead.
- * @fires item-selected - Fired when an item is selected from the custom
- * dropdown, or when the value of the native datalist input matches an item.
- * The selected value is available on `event.detail.value`.
  */
 @customElement('lit-typeahead')
 export class LitTypeahead extends LitElement {
@@ -391,10 +388,6 @@ export class LitTypeahead extends LitElement {
     this.value =
       matchingItem !== undefined ? this._itemValue(matchingItem) : input.value;
     this._dispatchChange(matchingItem ?? input.value);
-
-    if (matchingItem !== undefined) {
-      this._dispatchItemSelected(this._itemValue(matchingItem));
-    }
   }
 
   private _handleInput(event: Event) {
@@ -507,7 +500,6 @@ export class LitTypeahead extends LitElement {
     this.value = this._itemValue(item);
     this._closeDropdown();
     this._dispatchChange(item);
-    this._dispatchItemSelected(this._itemValue(item));
   }
 
   /**
@@ -597,15 +589,6 @@ export class LitTypeahead extends LitElement {
     );
   }
 
-  private _dispatchItemSelected(value: string) {
-    this.dispatchEvent(
-      new CustomEvent('item-selected', {
-        detail: {value},
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
 }
 
 declare global {
