@@ -96,7 +96,7 @@ suite('lit-typeahead', () => {
     assert.equal(input.value, 'Canada');
   });
 
-  test('emits a change event with the selected value', async () => {
+  test('emits change and item-selected when an item is selected', async () => {
     const el = (await fixture(
       html`<lit-typeahead
         items='["United States", "Canada", "Mexico"]'
@@ -105,16 +105,30 @@ suite('lit-typeahead', () => {
     await el.updateComplete;
 
     const input = el.shadowRoot!.querySelector('input')!;
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+
     const changePromise = new Promise<CustomEvent>((resolve) => {
       el.addEventListener('change', (event) => resolve(event as CustomEvent));
     });
+    const selectedPromise = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('item-selected', (event) =>
+        resolve(event as CustomEvent)
+      );
+    });
 
-    input.value = 'Mexico';
-    input.dispatchEvent(new Event('change', {bubbles: true}));
+    const option = el.shadowRoot!.querySelectorAll('.dropdown li')[1] as HTMLElement;
+    option.click();
+    await el.updateComplete;
 
-    const event = await changePromise;
-    assert.equal(event.detail.value, 'Mexico');
-    assert.equal(el.value, 'Mexico');
+    const [changeEvent, selectedEvent] = await Promise.all([
+      changePromise,
+      selectedPromise,
+    ]);
+    assert.equal(changeEvent.detail.value, 'Canada');
+    assert.equal(selectedEvent.detail.value, 'Canada');
+    assert.equal(el.value, 'Canada');
+    assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
   });
 
   test('opens the dropdown and shows all items on focus', async () => {
@@ -240,6 +254,130 @@ suite('lit-typeahead', () => {
     assert.equal(event.detail.value, 'Mexico');
     assert.equal(el.value, 'Mexico');
     assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
+  });
+
+  test('resets the filter after selecting an item', async () => {
+    const el = (await fixture(
+      html`<lit-typeahead
+        items='["United States", "Canada", "Mexico"]'
+      ></lit-typeahead>`
+    )) as LitTypeahead;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('input')!;
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+
+    // Narrow the list with a query.
+    input.value = 'ca';
+    input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+    await el.updateComplete;
+    assert.equal(el.shadowRoot!.querySelectorAll('.dropdown li').length, 1);
+
+    // Select the only match.
+    const option = el.shadowRoot!.querySelector('.dropdown li') as HTMLElement;
+    option.click();
+    await el.updateComplete;
+    assert.equal(el.value, 'Canada');
+    assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
+
+    // Reopening the dropdown shows the full list, not the stale filter.
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    const options = el.shadowRoot!.querySelectorAll('.dropdown li');
+    assert.equal(options.length, 3);
+    assert.equal(options[0].textContent?.trim(), 'United States');
+    assert.equal(options[2].textContent?.trim(), 'Mexico');
+  });
+
+  test('keeps search text separate from the selected value', async () => {
+    const el = (await fixture(
+      html`<lit-typeahead
+        items='["United States", "Canada", "Mexico"]'
+        value="Canada"
+      ></lit-typeahead>`
+    )) as LitTypeahead;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('input')!;
+    assert.equal(input.value, 'Canada');
+
+    // Opening clears the input so the user can search.
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    assert.equal(input.value, '');
+    assert.equal(el.value, 'Canada');
+
+    // Typing narrows the list but never changes the selection.
+    input.value = 'Me';
+    input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+    await el.updateComplete;
+    assert.equal(el.value, 'Canada');
+    assert.equal(el.shadowRoot!.querySelectorAll('.dropdown li').length, 1);
+    assert.equal(
+      el.shadowRoot!.querySelector('.dropdown li')!.textContent?.trim(),
+      'Mexico'
+    );
+
+    // Closing without selecting restores the previous value.
+    input.dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
+    assert.equal(el.value, 'Canada');
+    assert.equal(input.value, 'Canada');
+  });
+
+  test('Escape closes the dropdown and reverts the input without selecting', async () => {
+    const el = (await fixture(
+      html`<lit-typeahead
+        items='["United States", "Canada", "Mexico"]'
+        value="Canada"
+      ></lit-typeahead>`
+    )) as LitTypeahead;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('input')!;
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+
+    input.value = 'ca';
+    input.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
+    await el.updateComplete;
+    assert.equal(el.shadowRoot!.querySelectorAll('.dropdown li').length, 1);
+
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        composed: true,
+      })
+    );
+    await el.updateComplete;
+
+    assert.equal(el.shadowRoot!.querySelector('.dropdown'), null);
+    assert.equal(el.value, 'Canada');
+    assert.equal(input.value, 'Canada');
+  });
+
+  test('marks the currently selected item with the is-selected class', async () => {
+    const el = (await fixture(
+      html`<lit-typeahead
+        items='["United States", "Canada", "Mexico"]'
+        value="Canada"
+      ></lit-typeahead>`
+    )) as LitTypeahead;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('input')!;
+    input.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+
+    const options = el.shadowRoot!.querySelectorAll('.dropdown li');
+    assert.equal(options.length, 3);
+    const selected = el.shadowRoot!.querySelector('.dropdown li.is-selected');
+    assert.ok(selected);
+    assert.equal(selected!.textContent?.trim(), 'Canada');
+    assert.equal(options[0].classList.contains('is-selected'), false);
   });
 
   test('closes the dropdown on blur', async () => {
